@@ -18,7 +18,9 @@
 from __future__ import annotations
 
 import json
+import shutil
 import struct
+import subprocess
 import sys
 import zlib
 from collections import deque
@@ -26,6 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
+# 网页实际加载的小图都放这儿（assets/ 里的大图只作为"原图"留着）
+SMALL = ASSETS / "small"
 
 # 人物精灵表：源文件 -> 输出名
 SHEETS = [
@@ -622,6 +626,79 @@ def process_background(job: dict) -> dict:
     return {"image": out_png.name, "width": out_w, "height": out_h}
 
 
+# 小图任务：源图（assets/ 里的大图）-> assets/small/ 下的 webp
+#   scale    ：还要不要再缩小（人物只显示 133px 高，精灵表缩到 0.55 倍仍然够清晰）
+#   quality  ：None = 无损（人物 / 头像这种带透明边缘的不能有压缩脏边），
+#              数字 = 有损质量（背景照片类）
+SMALL_JOBS = [
+    # 精灵表要按"每帧宽度"对齐着缩，不然整张图缩完跟 frameWidth 对不上，最后一帧会偏几像素
+    {"src": "pan_ersai.png", "scale": 0.55, "quality": None, "frames": 9},
+    {"src": "huang_jie.png", "scale": 0.55, "quality": None, "frames": 9},
+    {"src": "yang_fan.png", "scale": 0.55, "quality": None, "frames": 9},
+    {"src": "avatar_pan.png", "scale": 0.72, "quality": None},
+    {"src": "avatar_huang.png", "scale": 0.72, "quality": None},
+    {"src": "avatar_yang.png", "scale": 0.72, "quality": None},
+    {"src": "lake_bg.png", "scale": 1.0, "quality": 82},
+]
+
+
+def process_small_assets() -> None:
+    """把大图缩/压成 assets/small/*.webp —— 网页只加载这些。
+
+    背景是照片类的，用有损 webp（1.9MB -> 一两百 KB）；
+    人物 / 头像是带透明边缘的，用无损 webp（只缩小尺寸，不产生压缩脏边）。
+    """
+    if not shutil.which("cwebp"):
+        print("\n!! 没找到 cwebp，跳过小图生成（brew install webp 可以装上）", file=sys.stderr)
+        return
+
+    SMALL.mkdir(parents=True, exist_ok=True)
+    print("\n=== 生成网页用的小图（assets/small/）===")
+    total_before = total_after = 0
+    for job in SMALL_JOBS:
+        src = ASSETS / job["src"]
+        if not src.exists():
+            print(f"  跳过（找不到 {src.name}）")
+            continue
+        width, height, channels, _, px = read_png(src)
+        rgba = to_rgba(bytes(px), width, height, channels)
+        out_h = max(1, round(height * job["scale"]))
+        frames = job.get("frames")
+        if frames:
+            # 每帧宽度取整之后再乘回去，保证 out_w == frameWidth * frames
+            out_w = max(1, round(width / frames * job["scale"])) * frames
+        else:
+            out_w = max(1, round(width * job["scale"]))
+        if (out_w, out_h) != (width, height):
+            rgba = resize_rgba(rgba, width, height, out_w, out_h)
+
+        tmp = SMALL / (src.stem + ".tmp.png")
+        write_png(tmp, out_w, out_h, rgba)
+        out = SMALL / (src.stem + ".webp")
+        cmd = ["cwebp", "-quiet", "-mt"]
+        if job["quality"] is None:
+            cmd += ["-lossless", "-z", "9"]
+        else:
+            cmd += ["-q", str(job["quality"]), "-m", "6"]
+        cmd += [str(tmp), "-o", str(out)]
+        subprocess.run(cmd, check=True)
+        tmp.unlink()
+
+        before = src.stat().st_size
+        after = out.stat().st_size
+        total_before += before
+        total_after += after
+        print(
+            f"  {src.name:18s} {width}x{height} {before // 1024:5d}KB"
+            f"  ->  small/{out.name:18s} {out_w}x{out_h} {after // 1024:5d}KB"
+        )
+    if total_before:
+        print(
+            f"  合计：{total_before // 1024}KB -> {total_after // 1024}KB"
+            f"（压到 {total_after / total_before * 100:.0f}%）"
+        )
+
+
 def main() -> int:
     for job in SHEETS:
         process_sheet(job)
@@ -629,6 +706,7 @@ def main() -> int:
         process_portrait(job)
     for job in BACKGROUNDS:
         process_background(job)
+    process_small_assets()
     return 0
 
 

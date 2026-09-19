@@ -91,6 +91,7 @@ assets/lake_bg.png      松鸭湖背景（已抹掉右下角水印，1280×960�
 assets/avatar_pan.png   潘尔赛对话头像（从卡通图裁成圆形）
 assets/avatar_huang.png 黄姐对话头像
 assets/avatar_yang.png  杨凡对话头像
+assets/small/*.webp     网页真正加载的小图（上面这些压出来的，见下节）
 tools/build_assets.py   把 AI 素材处理成上面这些图
 tools/dev-server.js     零依赖静态服务器
 tools/screenshot.mjs    无头 Chrome 截图 + 控制台报错检查（命令行验收画面）
@@ -217,6 +218,33 @@ frameHeight` 即可。
   量法是沿脸部中线往下找那条深色的嘴线（潘尔赛 0.71 / 黄姐 0.73 / 杨凡 0.66）；
   喷之前还会再往下压 10px、只往上飘一点点——不然粒子会糊在鼻子或额头上。
   换角色素材时重新量一遍这个值就行。
+
+## 资源体积（手机加载）
+
+`assets/*.png` 是"原图"，**网页加载的是 `assets/small/*.webp`**（`src/config.js`
+里的 `path` / `bgPath` 都指向小图）：
+
+| 用途 | 原图 | 网页加载 | 做法 |
+| --- | --- | --- | --- |
+| 潘尔赛精灵表 | 578KB | 114KB | 缩到 0.55 倍 + 无损 webp |
+| 黄姐精灵表 | 476KB | 98KB | 同上 |
+| 杨凡精灵表 | 565KB | 108KB | 同上 |
+| 三张对话头像 | 155KB | 56KB | 缩到 161×161 + 无损 webp |
+| 松鸭湖背景 | 1854KB | 91KB | 尺寸不变 + 有损 webp（-q 82） |
+| **合计** | **3.6MB** | **470KB** | 压到 13% |
+
+首屏（银行/街道要用的精灵表 + 头像）从 1.8MB 降到 380KB 左右，松鸭湖背景
+1.8MB 降到 91KB，手机上快很多。
+
+- 生成方式是 `python3 tools/build_assets.py` 最后一步（`SMALL_JOBS`），依赖
+  `cwebp`（`brew install webp`）；精灵表按**每帧宽度对齐**着缩，缩完 981×174 /
+  1188×157 / 891×177，能被帧宽整除，所以 `src/config.js` 里的
+  `frameWidth / frameHeight / scale / body` 也换成了新的一套（屏幕上的显示尺寸没变，
+  还是 133px 高）。
+- 人物 / 头像用**无损** webp：带透明边缘的图用有损压会出现脏边；背景是照片类，
+  有损受益最大。
+- 仓库里那几张原始大图（`松鸭湖背景图.png` 等 ~15MB）页面并不加载，只是留着当素材源；
+  真想让仓库也小下来，可以只留 `assets/small/`，把源图挪到别处或删掉。
 
 ## 背景音乐（BGM）
 

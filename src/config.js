@@ -11,20 +11,21 @@ export const WALL_H = 178;
 
 /**
  * 人物精灵表参数，由 tools/build_assets.py 生成。
- * 对应 assets/pan_ersai.json：单帧 199x317，共 9 帧，排成一行。
- * 如果重新生成素材（改了 DOWNSCALE），请同步这里。
+ * 网页加载的是缩过的小图 assets/small/pan_ersai.webp（单帧 109x174，共 9 帧），
+ * assets/pan_ersai.png 那张原图只作为"原图"留在仓库里；
+ * 重新生成素材（改了 SMALL_JOBS 里的 scale）后请同步这里的尺寸 / scale / body。
  */
 export const SPRITE = {
   key: 'pan',
-  path: 'assets/pan_ersai.png',
+  path: 'assets/small/pan_ersai.webp',
   animPrefix: 'pan',
   /** 嘴在人物高度上的位置（从脚底往上算），吐东西 / 说话气泡都用它定位 */
   mouthRatio: 0.71,
-  frameWidth: 199,
-  frameHeight: 317,
+  frameWidth: 109,
+  frameHeight: 174,
   frameCount: 9,
-  /** 屏幕上人物高度约 133px */
-  scale: 0.42,
+  /** 屏幕上人物高度还是约 133px（小图缩到 0.55 倍，scale 相应放大） */
+  scale: 0.764,
   /**
    * 9 帧其实是 4 组朝向的姿势，不是一条步态循环（按帧顺序播放会看起来像在原地转圈）：
    *   0、1  = 正面（脸在正中间）
@@ -50,7 +51,7 @@ export const PLAYER = {
   walkSpeed: 235,
   runSpeed: 360,
   /** 碰撞体（以精灵表原始像素为单位，会自动乘以 scale） */
-  body: { width: 96, height: 56, offsetBottom: 8 },
+  body: { width: 53, height: 31, offsetBottom: 4 },
   startX: 640,
   startY: 560,
 };
@@ -66,12 +67,12 @@ export const PLAYER = {
  */
 export const HUANG = {
   key: 'huang',
-  path: 'assets/huang_jie.png',
+  path: 'assets/small/huang_jie.webp',
   animPrefix: 'huang',
-  frameWidth: 240,
-  frameHeight: 286,
+  frameWidth: 132,
+  frameHeight: 157,
   frameCount: 9,
-  scale: 0.42,
+  scale: 0.764,
   directions: {
     down: { frames: [0, 1], fps: 4.5 },
     up: { frames: [0, 1], fps: 4.5 },
@@ -79,7 +80,7 @@ export const HUANG = {
     right: { frames: [2, 4], fps: 4.5 },
   },
   idleFrames: { down: 0, up: 0, left: 5, right: 2 },
-  body: { width: 104, height: 60, offsetBottom: 8 },
+  body: { width: 57, height: 33, offsetBottom: 4 },
 
   name: '黄姐',
   /** 嘴的位置（见 SPRITE.mouthRatio） */
@@ -110,12 +111,12 @@ export const HUANG = {
  */
 export const YANGFAN = {
   key: 'yang',
-  path: 'assets/yang_fan.png',
+  path: 'assets/small/yang_fan.webp',
   animPrefix: 'yang',
-  frameWidth: 180,
-  frameHeight: 321,
+  frameWidth: 99,
+  frameHeight: 177,
   frameCount: 9,
-  scale: 0.42,
+  scale: 0.764,
   directions: {
     down: { frames: [0, 1], fps: 4.5 },
     up: { frames: [5], fps: 4.5 },
@@ -123,7 +124,7 @@ export const YANGFAN = {
     right: { frames: [8], fps: 4.5 },
   },
   idleFrames: { down: 0, up: 5, left: 2, right: 8 },
-  body: { width: 100, height: 54, offsetBottom: 8 },
+  body: { width: 55, height: 30, offsetBottom: 4 },
 
   name: '杨凡',
   /** 嘴的位置（见 SPRITE.mouthRatio） */
@@ -140,9 +141,9 @@ export const YANGFAN = {
 
 /** 对话头像（由 tools/build_assets.py 从卡通图裁成圆形） */
 export const AVATARS = {
-  pan: { key: 'avatar-pan', path: 'assets/avatar_pan.png', name: '潘尔赛' },
-  huang: { key: 'avatar-huang', path: 'assets/avatar_huang.png', name: '黄姐' },
-  yang: { key: 'avatar-yang', path: 'assets/avatar_yang.png', name: '杨凡' },
+  pan: { key: 'avatar-pan', path: 'assets/small/avatar_pan.webp', name: '潘尔赛' },
+  huang: { key: 'avatar-huang', path: 'assets/small/avatar_huang.webp', name: '黄姐' },
+  yang: { key: 'avatar-yang', path: 'assets/small/avatar_yang.webp', name: '杨凡' },
 };
 
 /** 下班对话：说完黄姐入队 */
@@ -202,14 +203,15 @@ export const STREET_DIALOGUE_LEFT = [
 
 /**
  * 松鸭湖：马路右侧尽头「松鸭湖」路牌按 E 进来。
- * 背景图由 tools/build_assets.py 从 松鸭湖背景图.png 处理而来（assets/lake_bg.png）：
+ * 背景图由 tools/build_assets.py 从 松鸭湖背景图.png 处理而来，
+ * 网页加载的是 assets/small/lake_bg.webp（有损 webp，1.8MB -> 90KB 左右）：
  * 先抹掉右下角「豆包AI生成」的水印，再缩到 1280x960（正好 1:1 铺满画布宽度）。
  * 多出来的 240 高度把天空往上裁掉，下半部分的水面和湖边路面正好当可行走区。
  * 下面这些坐标都是"游戏画面"坐标，直接用截图调到合适即可。
  */
 export const LAKE = {
   bgKey: 'lake-bg',
-  bgPath: 'assets/lake_bg.png',
+  bgPath: 'assets/small/lake_bg.webp',
   /**
    * 可行走范围：红色的湖边马路 + 灰褐色路面，整片都能走。
    * 左上角是湖水，岸边的栏杆就是边界——shore 里这些看不见的"台阶"挡板沿着栏杆
