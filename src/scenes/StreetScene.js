@@ -1,4 +1,11 @@
-import { GAME_WIDTH, GAME_HEIGHT, STREET, STREET_DIALOGUE_LEFT, FONT } from '../config.js';
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  STREET,
+  STREET_DIALOGUE_LEFT,
+  FINALE,
+  FONT,
+} from '../config.js';
 import { createStreetArt, STREET_PROPS } from '../art/streetArt.js';
 import GameScene from './GameScene.js';
 
@@ -32,6 +39,8 @@ export default class StreetScene extends GameScene {
 
     // 走过路牌的自动提示只触发一次
     this.leftTalked = this.registry.get('streetLeftTalked') === true;
+    // 已经通关（看过结局）就别再触发一次
+    this.finaleDone = this.registry.get('gameOver') === true;
 
     const joined = this.registry.get('huangJoined') === true;
     const yangJoined = this.registry.get('yangJoined') === true;
@@ -140,8 +149,14 @@ export default class StreetScene extends GameScene {
 
   /** 走过水星街道路牌：想起约了杨凡，自动触发对话 */
   onUpdate() {
+    // 结局：和杨凡告别之后，走到左边尽头「水星街道」就结束
+    const finaleArmed = this.registry.get('finaleArmed') === true;
+    if (finaleArmed && !this.finaleDone && this.player.x <= FINALE.passX) {
+      this.showEnding();
+      return;
+    }
     // 左侧尽头：自动想起约了杨凡（只触发一次）
-    if (!this.leftTalked && this.player.x <= STREET.signPassX) {
+    if (!this.leftTalked && !finaleArmed && this.player.x <= STREET.signPassX) {
       this.leftTalked = true;
       this.registry.set('streetLeftTalked', true);
       this.talkAtLeftSign();
@@ -149,6 +164,80 @@ export default class StreetScene extends GameScene {
     }
     // 右侧尽头：自动切到松鸭湖
     if (this.player.x >= STREET.rightEndPassX) this.goToLake();
+  }
+
+  /* ------------------------------------------------------------- 结局 */
+
+  /** 走到水星街道尽头：黑幕 + 游戏结束 */
+  showEnding() {
+    this.finaleDone = true;
+    this.registry.set('gameOver', true);
+    this.setCinematic(true);
+    this.hint.setVisible(false);
+    this.bubble?.destroy();
+    this.bubble = null;
+
+    const veil = this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x000000, 1)
+      .setAlpha(0)
+      .setDepth(9800);
+    this.tweens.add({
+      targets: veil,
+      alpha: 0.9,
+      duration: 1200,
+      onComplete: () => this.showEndCard(),
+    });
+  }
+
+  showEndCard() {
+    const center = GAME_WIDTH / 2;
+    const card = this.add.container(0, 0).setDepth(9801).setAlpha(0);
+
+    const place = this.add
+      .text(center, 250, FINALE.place, {
+        fontFamily: FONT,
+        fontSize: '22px',
+        color: '#c9a44c',
+      })
+      .setOrigin(0.5);
+    const title = this.add
+      .text(center, 320, FINALE.title, {
+        fontFamily: FONT,
+        fontSize: '64px',
+        color: '#f7ead0',
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+    const line = this.add
+      .text(center, 400, FINALE.line, {
+        fontFamily: FONT,
+        fontSize: '20px',
+        color: '#d9c39a',
+      })
+      .setOrigin(0.5);
+    const hint = this.add
+      .text(center, 500, FINALE.hint, {
+        fontFamily: FONT,
+        fontSize: '16px',
+        color: '#b9a884',
+      })
+      .setOrigin(0.5);
+
+    card.add([place, title, line, hint]);
+    this.tweens.add({ targets: card, alpha: 1, duration: 900 });
+    this.tweens.add({ targets: hint, alpha: 0.35, duration: 800, yoyo: true, repeat: -1 });
+
+    this.input.keyboard.once('keydown-R', () => this.restartGame());
+  }
+
+  /** 按 R：清掉剧情进度，从头再来 */
+  restartGame() {
+    ['huangJoined', 'yangJoined', 'yangLeftTeam', 'hotpotDone', 'finaleArmed', 'gameOver'].forEach(
+      (k) => this.registry.set(k, false)
+    );
+    this.registry.set('yangStay', null);
+    this.registry.set('streetLeftTalked', false);
+    this.scene.start('StartScene');
   }
 
   /** 左侧路牌：约了杨凡，改去松鸭湖 */

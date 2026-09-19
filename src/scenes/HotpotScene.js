@@ -206,6 +206,8 @@ export default class HotpotScene extends GameScene {
         onComplete: () => {
           sprite.face(sprite.x, sprite.y + 60);
           if (sprite === this.player) {
+            // 火锅这顿吃完了：回松鸭湖就会触发和杨凡告别
+            this.registry.set('hotpotDone', true);
             this.interactables = this.interactables.filter((item) => !item.meal);
             this.setCinematic(false);
             this.defaultHint = '吃都吃了……　WASD 移动　·　左边门口回松鸭湖';

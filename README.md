@@ -20,7 +20,13 @@ npm start          # 启动零依赖静态服务器
 | 快走 | 按住 `Shift` |
 | 互动 / 翻对话 | `E` 或 `空格` |
 | 显示碰撞体 | `B`（调场景时很有用） |
-| 触屏 / 鼠标 | 按住拖动 = 虚拟摇杆 |
+| 触屏 / 鼠标（电脑模式） | 按住拖动 = 虚拟摇杆 |
+| 手机模式 | 左下方向盘移动，右下 `E` 互动 |
+
+打开页面先看到**开场界面**：三个角色的卡通头像 + 必选的模式（电脑 / 手机）+ 开始游戏。
+选电脑模式就是上面这套键盘操作；选手机模式会尽量切成横屏（`requestLandscape()`：先试
+全屏再试 `screen.orientation.lock('landscape')`），转不过来时（iOS 之类）会盖一层
+「请把手机横过来」的提示，进游戏后用左下方向盘 + 右下互动键。
 
 黄姐一开始站在大厅左边的花盆旁边，先找她说话（说完她就加入队伍，之后会一直跟在
 潘尔赛身后走），然后才能走到银行的自动门按 `E` 出门。外面是一条横着的马路：
@@ -56,6 +62,7 @@ npm start          # 启动零依赖静态服务器
 index.html              页面入口（Phaser 从 vendor/ 本地加载，可离线运行）
 src/config.js           尺寸、配色、人物参数都在这里调
 src/main.js             游戏实例配置
+src/scenes/StartScene.js 开场界面：三个角色 + 模式选择 + 开始游戏
 src/scenes/GameScene.js 场景基类：共用素材、角色、HUD、操控、对话、跟随、互动
 src/scenes/BankScene.js 银行大厅：柜台、ATM、取号机、大门
 src/scenes/StreetScene.js 银行外面：马路、路牌、绿化、来回的汽车
@@ -65,8 +72,10 @@ src/objects/Player.js   潘尔赛：八方向移动 + 行走动画
 src/objects/Companion.js 队友（黄姐 / 杨凡）：沿玩家走过的轨迹跟随
 src/systems/effects.js  演出特效：火锅热气、彩虹色呕吐物
 src/ui/DialogueBox.js   底部对话框（头像 + 说话人 + 台词，空格/E 翻页）
+src/ui/TouchControls.js 手机模式的虚拟按键：左下方向盘 + 右下互动键
 src/systems/FollowTrail.js 面包屑跟随算法
 src/systems/animations.js 四个方向的行走 / 站立动画注册
+src/systems/orientation.js 手机模式横屏：尽力锁定 + 竖屏提示
 src/art/bankArt.js      用 Canvas 代码画出大厅背景与柜台/ATM/沙发等贴图
 src/art/streetArt.js    街道背景、路牌、树、路灯、长椅、汽车
 src/art/hotpotArt.js    火锅店：墙面/灯笼/地板/圆桌火锅/吧台/小桌
@@ -201,7 +210,23 @@ frameHeight` 即可。
 - **冒热气 / 吐彩虹**：`potSteam()` 每隔 260ms 往锅里丢几团白色椭圆；`rainbowVomit()`
   从**嘴边**喷一串彩色小球（先往外再落下）。嘴的位置按角色不同写在
   `SPRITE/HUANG/YANGFAN.mouthRatio`（是从各自精灵图上量的：嘴离脚底占身高的比例），
-  改角色素材时顺手量一下这个值，不然会从额头喷出来。
+  量法是沿脸部中线往下找那条深色的嘴线（潘尔赛 0.71 / 黄姐 0.73 / 杨凡 0.66）；
+  喷之前还会再往下压 10px、只往上飘一点点——不然粒子会糊在鼻子或额头上。
+  换角色素材时重新量一遍这个值就行。
+
+## 开场界面与手机模式
+
+- 开场界面是 `StartScene`：三个角色的卡通头像（直接用 `assets/avatar_*.png`——
+  从各自的卡通图裁出来的圆形头像，比塞 2048×2048 的原图小得多）、必选的模式、
+  开始游戏按钮。选完写进 `registry.inputMode`，然后进银行大厅。
+- 电脑模式：`GameScene.createControls()` 走原来那套（键盘 + 按住拖动的摇杆），
+  操作逻辑一点没变。
+- 手机模式：`createControls()` 改成 new 一个 `TouchControls`（左下方向盘 + 右下互动键），
+  `readInput()` 读它的方向向量、`interactJustPressed()` 把右下按钮和 `E` / `空格`
+  一视同仁；底部提示条会经 `mobileHint()` 把「WASD…」自动换成「左下方向键…」。
+- 横屏：`requestLandscape()` 在"开始游戏"这个用户手势里尽量全屏 + 锁方向；
+  锁不了（iOS 之类）就由 `watchOrientation()` 控制 `#rotate-hint` 让玩家手动横过来。
+- 结局画面按 `R` 回到开场界面重新选模式（`registry` 里的剧情进度一起清空）。
 
 ## 场景切换与街道
 

@@ -3,7 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>桂圆潘尔赛的日常 · 银行大厅</title>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#171210" />
+    <title>桂圆潘尔赛的日常</title>
     <link rel="icon" href="data:," />
     <style>
       :root {
@@ -17,6 +21,12 @@
         margin: 0;
         height: 100%;
         overflow: hidden;
+        /* 手机上不要有滚动 / 长按选中 / 双击缩放 */
+        overscroll-behavior: none;
+        touch-action: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
         background: radial-gradient(circle at 50% 35%, #2c2320 0%, #171210 65%, #0d0a09 100%);
         font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
       }
@@ -26,6 +36,49 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        touch-action: none;
+      }
+      #game-root canvas {
+        touch-action: none;
+      }
+      /* 手机模式竖屏时盖上来，提示把手机横过来 */
+      #rotate-hint {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
+        z-index: 20;
+        background: rgba(12, 9, 7, 0.96);
+        color: #f2e6cc;
+        letter-spacing: 1px;
+        text-align: center;
+        padding: 24px;
+      }
+      #rotate-hint .rotate-icon {
+        font-size: 54px;
+        animation: rotate-tip 1.8s ease-in-out infinite;
+      }
+      #rotate-hint .rotate-title {
+        font-size: 20px;
+        font-weight: 600;
+      }
+      #rotate-hint .rotate-sub {
+        font-size: 14px;
+        color: #b9a884;
+        line-height: 1.7;
+      }
+      @keyframes rotate-tip {
+        0%,
+        40% {
+          transform: rotate(0deg);
+        }
+        70%,
+        100% {
+          transform: rotate(90deg);
+        }
       }
       #game-root canvas {
         border-radius: 10px;
@@ -56,8 +109,13 @@
   </head>
   <body>
     <div id="game-root"></div>
-    <div id="loading">正在加载银行大厅…</div>
+    <div id="loading">正在加载游戏…</div>
     <div id="boot-error"></div>
+    <div id="rotate-hint">
+      <div class="rotate-icon">📱</div>
+      <div class="rotate-title">请把手机横过来</div>
+      <div class="rotate-sub">手机模式是横屏玩的<br />转一下手机就能继续</div>
+    </div>
 
     <script>
       // 页面出错时把信息显示出来，方便排查（也方便自动化检查）

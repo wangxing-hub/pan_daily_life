@@ -9,18 +9,30 @@ import {
   DIALOGUE_AFTER,
   TEAM_JOIN_TEXT,
   YANG_DIALOGUE_AFTER,
+  YANG_DIALOGUE_LEFT,
   TEAM_JOIN_YANG_TEXT,
   FONT,
 } from '../config.js';
 import Player from '../objects/Player.js';
 import Companion from '../objects/Companion.js';
 import DialogueBox from '../ui/DialogueBox.js';
+import TouchControls from '../ui/TouchControls.js';
 import FollowTrail from '../systems/FollowTrail.js';
 import { createAllCharacterAnims } from '../systems/animations.js';
 import { createSoftShadow } from '../art/canvasKit.js';
 
 /** 四方向的单位向量：把「朝向」换算成"再往前走一点会到哪儿" */
 const DIR_VEC = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+/** 手机模式下把提示里的键位说明换成虚拟按键的说法 */
+function mobileHint(text) {
+  return text
+    .replace('按 E / 空格 互动：', '点右下 E：')
+    .replace('按 E / 空格 ', '点右下 E ')
+    .replace('WASD / 方向键 移动　·　Shift 快走　·　E / 空格 互动', '左下方向键移动　·　右下 E 互动')
+    .replace('WASD / 方向键 移动　·　E / 空格 互动', '左下方向键移动　·　右下 E 互动')
+    .replace('WASD 移动', '方向键移动');
+}
 
 /**
  * 场景基类：两个场景都要用的东西都在这里
@@ -55,6 +67,8 @@ export default class GameScene extends Phaser.Scene {
    */
   setupCommon(opts) {
     createSoftShadow(this);
+    /** 'desktop' = 键盘 + 拖动虚拟摇杆；'mobile' = 左下方向盘 + 右下互动键 */
+    this.mode = this.registry.get('inputMode') || 'desktop';
     this.defaultHint = opts.hint;
     this.interactables = opts.interactables || [];
     /** 场景里的固定 NPC（见 createNpcAt），和"跟队的黄姐"是两回事 */
@@ -170,6 +184,21 @@ export default class GameScene extends Phaser.Scene {
   }
 
   /**
+   * 队友离队：停在原地、不再跟随（现在是"杨凡留在松鸭湖"用）。
+   * 人不会消失，只是从"队伍"变回"站在那儿的 NPC"。
+   */
+  leaveTeam(sprite) {
+    if (!sprite) return;
+    sprite.joined = false;
+    sprite.setVelocity?.(0, 0);
+    if (sprite === this.yang) {
+      this.yangTrail = null;
+      this.registry.set('yangJoined', false);
+      this.registry.set('yangStay', { x: Math.round(sprite.x), y: Math.round(sprite.y) });
+    }
+  }
+
+  /**
    * 场景 NPC 入队：原地从"站在那儿的 NPC"变成"跟在队伍后面的队友"。
    * 精灵不重建，只是解除实体碰撞、挂上跟随轨迹。
    */
@@ -232,7 +261,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   setHint(text) {
-    if (this.hint.text !== text) this.hint.setText(text);
+    const shown = this.mode === 'mobile' ? mobileHint(text) : text;
+    if (this.hint.text !== shown) this.hint.setText(shown);
   }
 
   /** 开关过场：过场里玩家不能走动，底部提示条也收起来 */
@@ -244,6 +274,12 @@ export default class GameScene extends Phaser.Scene {
   createControls() {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,E,B,SHIFT,SPACE');
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    // 手机模式：左下方向盘 + 右下互动键，拖动摇杆那套就不开了
+    if (this.mode === 'mobile') {
+      this.controls = new TouchControls(this);
+      return;
+    }
 
     /** 触屏 / 鼠标拖拽摇杆 */
     this.touch = { active: false, ox: 0, oy: 0, x: 0, y: 0 };
@@ -288,6 +324,13 @@ export default class GameScene extends Phaser.Scene {
   readInput() {
     const k = this.keys;
     const c = this.cursors;
+
+    // 手机模式：只用左下方向盘
+    if (this.controls) {
+      const v = this.controls.vector;
+      return { x: v.x, y: v.y, run: false };
+    }
+
     let x = 0;
     let y = 0;
     if (k.A.isDown || c.left.isDown) x -= 1;
@@ -301,10 +344,21 @@ export default class GameScene extends Phaser.Scene {
     return { x, y, run: k.SHIFT.isDown };
   }
 
+  /** 互动键：键盘 E / 空格，或者手机模式右下角的按钮 */
+  interactJustPressed() {
+    return (
+      Phaser.Input.Keyboard.JustDown(this.keys.E) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.SPACE) ||
+      this.touchInteract === true
+    );
+  }
+
   /* ------------------------------------------------------------- 每帧 */
 
   update(time, delta) {
     if (Phaser.Input.Keyboard.JustDown(this.keys.B)) this.toggleDebug();
+    // 手机模式的互动键是"取一次就清掉"，这里先取好，供这一帧各处使用
+    this.touchInteract = this.controls ? this.controls.takeInteract() : false;
 
     // 切换场景的过程中不接受输入
     if (this.leaving) {
@@ -318,11 +372,7 @@ export default class GameScene extends Phaser.Scene {
       this.player.setVelocity(0, 0);
       this.player.setDepth(this.player.y);
       this.updateShadows();
-      if (
-        this.dialogue.isOpen &&
-        (Phaser.Input.Keyboard.JustDown(this.keys.E) ||
-          Phaser.Input.Keyboard.JustDown(this.keys.SPACE))
-      ) {
+      if (this.dialogue.isOpen && this.interactJustPressed()) {
         this.dialogue.next();
       }
       return;
@@ -339,10 +389,7 @@ export default class GameScene extends Phaser.Scene {
       }
       this.updateShadows();
       this.hint.setVisible(false);
-      if (
-        Phaser.Input.Keyboard.JustDown(this.keys.E) ||
-        Phaser.Input.Keyboard.JustDown(this.keys.SPACE)
-      ) {
+      if (this.interactJustPressed()) {
         this.dialogue.next();
       }
       return;
@@ -399,10 +446,7 @@ export default class GameScene extends Phaser.Scene {
       (target ? `按 E / 空格 互动：${target.label}` : this.defaultHint);
     this.setHint(hint);
 
-    const talk =
-      Phaser.Input.Keyboard.JustDown(this.keys.E) ||
-      Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
-    if (!target || !talk) return;
+    if (!target || !this.interactJustPressed()) return;
 
     if (target.huang) this.talkToHuang();
     else if (target.action) target.action();
@@ -428,7 +472,12 @@ export default class GameScene extends Phaser.Scene {
               radius: 118,
               label: YANGFAN.name,
               hint: `按 E / 空格 和${YANGFAN.name}说话`,
-              action: () => this.talkTo(this.yang, YANG_DIALOGUE_AFTER),
+              // 退队之后（留在湖边）换一句话
+              action: () =>
+                this.talkTo(
+                  this.yang,
+                  this.yang.joined ? YANG_DIALOGUE_AFTER : YANG_DIALOGUE_LEFT
+                ),
             },
           ]
         : []

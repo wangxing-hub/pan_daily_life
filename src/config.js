@@ -19,7 +19,7 @@ export const SPRITE = {
   path: 'assets/pan_ersai.png',
   animPrefix: 'pan',
   /** 嘴在人物高度上的位置（从脚底往上算），吐东西 / 说话气泡都用它定位 */
-  mouthRatio: 0.69,
+  mouthRatio: 0.71,
   frameWidth: 199,
   frameHeight: 317,
   frameCount: 9,
@@ -83,7 +83,7 @@ export const HUANG = {
 
   name: '黄姐',
   /** 嘴的位置（见 SPRITE.mouthRatio） */
-  mouthRatio: 0.57,
+  mouthRatio: 0.73,
   /** 一开始站在大厅左边的花盆旁边 */
   startX: 322,
   startY: 656,
@@ -127,7 +127,7 @@ export const YANGFAN = {
 
   name: '杨凡',
   /** 嘴的位置（见 SPRITE.mouthRatio） */
-  mouthRatio: 0.64,
+  mouthRatio: 0.66,
   /** 入队后的跟随参数：跟在黄姐（distance 78）后面，所以站得更远一点 */
   follow: {
     distance: 150,
@@ -307,6 +307,35 @@ export const HOTPOT_DIALOGUE = [
 
 /** 吃完之后的台词 */
 export const HOTPOT_SICK_DIALOGUE = [{ who: 'pan', text: '这是僵尸肉！！！' }];
+
+/**
+ * 结尾：吃完火锅回到松鸭湖中央，和杨凡告别（他留在湖边），
+ * 然后潘尔赛和黄姐一路走回水星街道，游戏结束。
+ */
+export const LAKE_FAREWELL = {
+  /** 湖心这块圆里触发告别 */
+  center: { x: 660, y: 506, radius: 175 },
+};
+
+export const LAKE_FAREWELL_DIALOGUE = [
+  { who: 'pan', text: '杨凡，我们回水星街道了' },
+  { who: 'huang', text: '下次别点僵尸肉了，太吓人了' },
+  { who: 'yang', text: '哈哈好，你们路上慢点，我再待会儿' },
+];
+
+export const YANG_LEAVE_TEXT = '杨凡离开队伍';
+
+/** 杨凡留在湖边之后，再和他搭话 */
+export const YANG_DIALOGUE_LEFT = [{ who: 'yang', text: '路上慢点，我再坐会儿' }];
+
+/** 走到街道左边尽头「水星街道」= 结尾 */
+export const FINALE = {
+  passX: 140,
+  place: '水 星 街 道',
+  title: '游戏结束',
+  line: '潘尔赛和黄姐沿着水星街道回家了',
+  hint: '按 R 重新开始',
+};
 
 /** 银行场景配色：暖木 + 大理石 + 黄铜 */
 export const PALETTE = {

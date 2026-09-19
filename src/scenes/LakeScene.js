@@ -1,4 +1,15 @@
-import { GAME_WIDTH, GAME_HEIGHT, LAKE, LAKE_DIALOGUE, YANGFAN, FONT } from '../config.js';
+import {
+  GAME_WIDTH,
+  GAME_HEIGHT,
+  LAKE,
+  LAKE_DIALOGUE,
+  LAKE_FAREWELL,
+  LAKE_FAREWELL_DIALOGUE,
+  YANG_DIALOGUE_LEFT,
+  YANG_LEAVE_TEXT,
+  YANGFAN,
+  FONT,
+} from '../config.js';
 import GameScene from './GameScene.js';
 
 /**
@@ -40,6 +51,11 @@ export default class LakeScene extends GameScene {
       ? { x: here.x + 68, y: here.y + 14 }
       : LAKE.huangSpawn;
     const yangHere = fromHotpot ? { x: here.x + 136, y: here.y - 6 } : LAKE.yangSpawn;
+    // 已经道别过的杨凡：留在湖边原地（位置存在 registry 里），不再是"等人组队"的状态
+    const yangGone = this.registry.get('yangLeftTeam') === true;
+    const stay = this.registry.get('yangStay');
+    const yangNpcPos = yangGone && stay ? stay : LAKE.yang;
+    this.farewellDone = yangGone;
     this.setupCommon({
       playerX: here.x,
       playerY: here.y,
@@ -59,10 +75,10 @@ export default class LakeScene extends GameScene {
         : [
             {
               config: YANGFAN,
-              x: LAKE.yang.x,
-              y: LAKE.yang.y,
+              x: yangNpcPos.x,
+              y: yangNpcPos.y,
               radius: LAKE.yang.radius,
-              dialogue: LAKE_DIALOGUE,
+              dialogue: yangGone ? YANG_DIALOGUE_LEFT : LAKE_DIALOGUE,
               idle: 'down',
             },
           ],
@@ -70,9 +86,11 @@ export default class LakeScene extends GameScene {
 
     // 还没入队的杨凡：说完这段就加入队伍（joinNpcTeam 里会把他转成队友）
     this.yangNpc = this.npcs.find((entry) => entry.config === YANGFAN) || null;
-    if (this.yangNpc) {
+    // 只有还没告别过才触发"加入队伍"
+    if (this.yangNpc && !yangGone) {
       this.yangNpc.onFinish = () => this.joinNpcTeam(this.yangNpc);
     }
+    if (this.yangNpc && yangGone) this.yangNpc.dialogue = YANG_DIALOGUE_LEFT;
   }
 
   /** 背景图 2304x1728 比画布高：按宽度铺满，再把多余的天空从上面裁掉 */
@@ -125,6 +143,9 @@ export default class LakeScene extends GameScene {
       return;
     }
 
+    // 吃完火锅回到湖中央：和杨凡告别
+    this.checkFarewell();
+
     // 入队之后他就是队友了，朝向交给跟随逻辑
     if (!this.yangNpc || this.yangNpc.npc.joined) return;
     const { npc } = this.yangNpc;
@@ -137,6 +158,47 @@ export default class LakeScene extends GameScene {
     const facing =
       Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'up' : 'down';
     if (npc.facing !== facing) npc.face(this.player.x, this.player.y);
+  }
+
+  /** 吃完火锅、又带着杨凡走回湖心 → 触发和杨凡告别 */
+  checkFarewell() {
+    if (this.farewellDone) return;
+    if (this.registry.get('hotpotDone') !== true) return;
+    const c = LAKE_FAREWELL.center;
+    if (Phaser.Math.Distance.Between(this.player.x, this.player.y, c.x, c.y) > c.radius) {
+      return;
+    }
+    // 杨凡还在队里就好好告别；万一没带他（跳过了组队），也直接放行回街道
+    if (this.yang && this.yang.joined) {
+      this.startFarewell();
+    } else {
+      this.farewellDone = true;
+      this.registry.set('finaleArmed', true);
+      this.defaultHint = '和黄姐一起回水星街道吧　·　走到左边尽头回马路';
+      this.setHint(this.defaultHint);
+    }
+  }
+
+  startFarewell() {
+    this.farewellDone = true;
+    this.setCinematic(true);
+    // 三个人转过来面对面
+    this.yang.face(this.player.x, this.player.y);
+    this.player.face(this.yang.x, this.yang.y);
+    this.huang?.face(this.yang.x, this.yang.y);
+    this.dialogue.start(LAKE_FAREWELL_DIALOGUE, () => this.finishFarewell());
+  }
+
+  finishFarewell() {
+    // 杨凡留在原地、退出队伍；接下来和黄姐回水星街道
+    this.leaveTeam(this.yang);
+    this.registry.set('yangLeftTeam', true);
+    this.registry.set('finaleArmed', true);
+    this.yang?.face(this.player.x, this.player.y);
+    this.showToast(YANG_LEAVE_TEXT, '他留在松鸭湖了');
+    this.setCinematic(false);
+    this.defaultHint = '和黄姐一起回水星街道吧　·　走到左边尽头回马路';
+    this.setHint(this.defaultHint);
   }
 
   /* ------------------------------------------------------------- 互动 */

@@ -1,4 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT } from './config.js';
+import { watchOrientation } from './systems/orientation.js';
+import StartScene from './scenes/StartScene.js';
 import BankScene from './scenes/BankScene.js';
 import StreetScene from './scenes/StreetScene.js';
 import LakeScene from './scenes/LakeScene.js';
@@ -22,8 +24,11 @@ const config = {
       debug: false,
     },
   },
-  scene: [BankScene, StreetScene, LakeScene, HotpotScene],
+  scene: [StartScene, BankScene, StreetScene, LakeScene, HotpotScene],
 };
 
 // 方便在控制台里调试：game.scene.getScene('BankScene')
 window.game = new Phaser.Game(config);
+
+// 手机模式 + 竖屏时提示玩家把手机横过来
+watchOrientation();

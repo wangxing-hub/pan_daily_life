@@ -47,16 +47,16 @@ export function rainbowVomit(scene, sprite, opts = {}) {
   // 每个角色的嘴在身高上的位置不一样（见 config 里的 mouthRatio）
   const ratio = opts.ratio ?? sprite.mouthRatio ?? 0.7;
   const mouthX = sprite.x + dir * 4;
-  // 再往下挪几像素：正好卡在嘴唇上，不会看着像从鼻子出来
-  const mouthY = sprite.y - sprite.displayHeight * ratio + 5;
+  // 再往下压 10px：正好卡在嘴唇下沿，不会看着像从鼻子出来
+  const mouthY = sprite.y - sprite.displayHeight * ratio + 10;
 
   for (let i = 0; i < count; i++) {
     const color = RAINBOW[i % RAINBOW.length];
     const r = 4 + Math.random() * 5;
     const dot = scene.add.circle(mouthX, mouthY, r, color, 0.96).setDepth(depth);
     const dx = dir * (50 + Math.random() * 110);
-    // 只往上飘一点点，主要往前往下，不然会糊在脸上 / 头顶
-    const up = Math.random() * 12;
+    // 几乎不往上飘，主要往前往下，不然会糊在脸上 / 头顶
+    const up = Math.random() * 6;
     const fall = 170 + Math.random() * 120;
 
     scene.tweens.add({
