@@ -12,6 +12,8 @@ const SIGN_GAP = 8;
 const SIGN_H = 38;
 /** 出口（自动门）位置：范围收得比较小，免得抢掉站在门边的黄姐 */
 const DOOR = { x: GAME_WIDTH / 2, y: GAME_HEIGHT - 16, radius: 92 };
+/** 走到门口这块（黄姐入队后）就自动出门，不用按 E */
+const DOOR_PASS = { x: DOOR.x, halfW: 78, yFrom: DOOR.y - 92 };
 
 /** 标牌中心 y：机器顶部再往上一点 */
 function signYAboveProp(prop, baseY) {
@@ -91,7 +93,7 @@ export default class BankScene extends GameScene {
           label: '大门',
           // 门是"走过去"的，不要求正面朝向
           ignoreFacing: true,
-          hint: () => (this.huang.joined ? '按 E / 空格 走出银行' : '先和黄姐打个招呼'),
+          hint: () => (this.huang.joined ? '走到门口就出门' : '先和黄姐打个招呼'),
           action: () => {
             if (this.huang.joined) this.leaveBank();
             else this.showBubble('先跟黄姐说句话再走吧。');
@@ -99,6 +101,33 @@ export default class BankScene extends GameScene {
         },
       ],
     });
+
+    // 出生点如果本来就在门口（从街上进来），先记为"已经在里面"，
+    // 这样站着不动不会被立刻弹回街上，得先走开再走回来才算"走到门口"
+    this.wasInDoorZone = this.inDoorZone();
+  }
+
+  /* ------------------------------------------------------------- 每帧 */
+
+  inDoorZone() {
+    return (
+      Math.abs(this.player.x - DOOR_PASS.x) <= DOOR_PASS.halfW &&
+      this.player.y >= DOOR_PASS.yFrom
+    );
+  }
+
+  /** 走到大门口：黄姐入队了就直接出门，没入队就提醒一句 */
+  onUpdate() {
+    const inside = this.inDoorZone();
+    const entered = inside && !this.wasInDoorZone;
+    this.wasInDoorZone = inside;
+    if (!entered || this.leaving) return;
+
+    if (this.huang?.joined) this.leaveBank();
+    else if (this.time.now > (this.leaveHintAt || 0)) {
+      this.leaveHintAt = this.time.now + 3200;
+      this.showBubble('先跟黄姐说句话再走吧。');
+    }
   }
 
   /* ------------------------------------------------------------- 场景搭建 */

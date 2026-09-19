@@ -1,6 +1,7 @@
 import { GAME_WIDTH, GAME_HEIGHT, AVATARS, FONT } from '../config.js';
 import { linear, radialEllipse, makeTexture } from '../art/canvasKit.js';
 import { requestLandscape } from '../systems/orientation.js';
+import { startBgm } from '../systems/bgm.js';
 
 /** 开场界面上的三个人 */
 const ROLES = [
@@ -40,6 +41,9 @@ export default class StartScene extends Phaser.Scene {
 
     this.cameras.main.fadeIn(360, 12, 8, 6);
     document.getElementById('loading')?.remove();
+
+    // 浏览器要求先有用户手势才能出声：第一次点屏幕就把 BGM 开起来
+    this.input.once('pointerdown', () => startBgm());
   }
 
   /** 开场背景：暖色渐变 + 一圈灯光 */

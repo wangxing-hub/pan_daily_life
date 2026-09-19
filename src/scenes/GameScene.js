@@ -19,6 +19,7 @@ import DialogueBox from '../ui/DialogueBox.js';
 import TouchControls from '../ui/TouchControls.js';
 import FollowTrail from '../systems/FollowTrail.js';
 import { createAllCharacterAnims } from '../systems/animations.js';
+import { startBgm, isBgmMuted, toggleBgmMute } from '../systems/bgm.js';
 import { createSoftShadow } from '../art/canvasKit.js';
 
 /** 四方向的单位向量：把「朝向」换算成"再往前走一点会到哪儿" */
@@ -258,6 +259,18 @@ export default class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 1)
       .setDepth(9001);
     this.setHint(this.defaultHint);
+
+    // 右上角：BGM 开关（选择记在 localStorage 里）
+    this.soundBtn = this.add
+      .text(GAME_WIDTH - 24, 22, isBgmMuted() ? '🔇' : '🔊', { fontSize: '26px' })
+      .setOrigin(1, 0)
+      .setDepth(9002)
+      .setInteractive({ useHandCursor: true });
+    this.soundBtn.on('pointerdown', () => {
+      startBgm(); // 万一还没启动（比如刷新后直接进场景）
+      const nowMuted = toggleBgmMute();
+      this.soundBtn.setText(nowMuted ? '🔇' : '🔊');
+    });
   }
 
   setHint(text) {

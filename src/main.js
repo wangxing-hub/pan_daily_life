@@ -1,5 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT } from './config.js';
 import { watchOrientation } from './systems/orientation.js';
+import { startBgm, stopBgm, toggleBgmMute, isBgmPlaying, isBgmMuted } from './systems/bgm.js';
 import StartScene from './scenes/StartScene.js';
 import BankScene from './scenes/BankScene.js';
 import StreetScene from './scenes/StreetScene.js';
@@ -29,6 +30,14 @@ const config = {
 
 // 方便在控制台里调试：game.scene.getScene('BankScene')
 window.game = new Phaser.Game(config);
+// 调试 BGM：window.bgm.start() / window.bgm.mute() / window.bgm.playing()
+window.bgm = {
+  start: startBgm,
+  stop: stopBgm,
+  mute: toggleBgmMute,
+  playing: isBgmPlaying,
+  muted: isBgmMuted,
+};
 
 // 手机模式 + 竖屏时提示玩家把手机横过来
 watchOrientation();

@@ -64,7 +64,7 @@ export default class StreetScene extends GameScene {
           y: STREET.bankDoor.y,
           radius: STREET.bankDoor.radius,
           label: '银行大门',
-          hint: '按 E / 空格 回银行',
+          hint: '往上走到银行门口就进去',
           // 门口是"走过去"的，不要求正面朝向
           ignoreFacing: true,
           action: () => this.backToBank(),
@@ -91,6 +91,9 @@ export default class StreetScene extends GameScene {
         },
       ],
     });
+
+    // 出生点如果在门口（从银行出来），先记为"已经在门口"，免得站着不动就来回弹
+    this.wasInBankDoor = this.inBankDoorZone();
   }
 
   /* ------------------------------------------------------------- 街景 */
@@ -149,6 +152,15 @@ export default class StreetScene extends GameScene {
 
   /** 走过水星街道路牌：想起约了杨凡，自动触发对话 */
   onUpdate() {
+    // 往上走到银行大门下面：直接进银行
+    const atBankDoor = this.inBankDoorZone();
+    const enteredBankDoor = atBankDoor && !this.wasInBankDoor;
+    this.wasInBankDoor = atBankDoor;
+    if (enteredBankDoor && !this.leaving) {
+      this.backToBank();
+      return;
+    }
+
     // 结局：和杨凡告别之后，走到左边尽头「水星街道」就结束
     const finaleArmed = this.registry.get('finaleArmed') === true;
     if (finaleArmed && !this.finaleDone && this.player.x <= FINALE.passX) {
@@ -164,6 +176,12 @@ export default class StreetScene extends GameScene {
     }
     // 右侧尽头：自动切到松鸭湖
     if (this.player.x >= STREET.rightEndPassX) this.goToLake();
+  }
+
+  /** 站到人行道最上面、大门正下方这一块 */
+  inBankDoorZone() {
+    const z = STREET.bankDoorPass;
+    return Math.abs(this.player.x - z.x) <= z.halfW && this.player.y <= z.y;
   }
 
   /* ------------------------------------------------------------- 结局 */
