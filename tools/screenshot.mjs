@@ -24,6 +24,10 @@ const waitMs = Number(process.argv[4] || 4000);
 const keyScript = process.argv[5] || '';
 // 第 6 个参数：截图前在页面里执行的表达式（用于对比验证，例如隐藏某个角色）
 const evalBeforeShot = process.argv[6] || '';
+// 环境变量：SHOT_SIZE=390x844（默认 1280x720）用来看手机竖屏 / 横屏的样子，
+// SHOT_TOUCH=1 打开触摸模拟（配合手机尺寸用）
+const shotSize = (process.env.SHOT_SIZE || '1280x720').split('x').map(Number);
+const shotTouch = process.env.SHOT_TOUCH === '1';
 const port = 9333 + Math.floor(Math.random() * 200);
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-shot-'));
 
@@ -144,11 +148,14 @@ async function main() {
   await send(ws, 'Page.enable');
   // 固定视口为 1280x720，避免截图里出现缩放/黑边
   await send(ws, 'Emulation.setDeviceMetricsOverride', {
-    width: 1280,
-    height: 720,
+    width: shotSize[0] || 1280,
+    height: shotSize[1] || 720,
     deviceScaleFactor: 1,
-    mobile: false,
+    mobile: shotTouch,
   });
+  if (shotTouch) {
+    await send(ws, 'Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  }
   await send(ws, 'Page.navigate', { url });
   await sleep(waitMs);
 
@@ -178,6 +185,28 @@ async function main() {
       continue;
     }
     // 前缀 ! 表示这个键按下后不松开（截图时人物还在走）
+    // click:x:y 在画面坐标点一下（开始菜单这类需要点击的地方用得上）
+    if (step.startsWith('click:')) {
+      const [, cx, cy] = step.split(':').map(Number);
+      await send(ws, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: cx, y: cy });
+      await send(ws, 'Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x: cx,
+        y: cy,
+        button: 'left',
+        clickCount: 1,
+      });
+      await sleep(90);
+      await send(ws, 'Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x: cx,
+        y: cy,
+        button: 'left',
+        clickCount: 1,
+      });
+      await sleep(400);
+      continue;
+    }
     const keepHold = step.startsWith('!');
     const [name, holdRaw] = (keepHold ? step.slice(1) : step).split(':');
     const k = KEY_MAP[name.toLowerCase()];

@@ -1,6 +1,6 @@
 import { GAME_WIDTH, GAME_HEIGHT, AVATARS, FONT } from '../config.js';
 import { linear, radialEllipse, makeTexture } from '../art/canvasKit.js';
-import { requestLandscape } from '../systems/orientation.js';
+import { requestLandscape, applyLayout } from '../systems/orientation.js';
 import { startBgm } from '../systems/bgm.js';
 
 /** 开场界面上的三个人 */
@@ -252,6 +252,7 @@ export default class StartScene extends Phaser.Scene {
 
   async startGame() {
     this.registry.set('inputMode', this.mode);
+    applyLayout(); // 立刻按新模式排版（竖屏 + 手机模式会马上转过来）
     if (this.mode === 'mobile') await requestLandscape();
     this.cameras.main.fadeOut(320, 0, 0, 0);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('BankScene'));

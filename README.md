@@ -242,8 +242,17 @@ frameHeight` 即可。
 - 手机模式：`createControls()` 改成 new 一个 `TouchControls`（左下方向盘 + 右下互动键），
   `readInput()` 读它的方向向量、`interactJustPressed()` 把右下按钮和 `E` / `空格`
   一视同仁；底部提示条会经 `mobileHint()` 把「WASD…」自动换成「左下方向键…」。
-- 横屏：`requestLandscape()` 在"开始游戏"这个用户手势里尽量全屏 + 锁方向；
-  锁不了（iOS 之类）就由 `watchOrientation()` 控制 `#rotate-hint` 让玩家手动横过来。
+- 横屏：`requestLandscape()` 在"开始游戏"这个用户手势里尽量全屏 + 锁方向。
+  如果浏览器吞了（微信 / QQ 内置浏览器、系统开了"竖屏锁定"，视口一直是竖的），
+  `applyLayout()` 会给 `body` 加上 `forced-landscape`：把画布**自己转 90°**
+  铺满屏幕——尺寸按视口算好、绝对定位居中，写在 `index.html` 的样式表里并用
+  `!important` 压住 Phaser 每次 refresh 写进 canvas 的行内 `width/height/margin`。
+  这样玩家把手机横过来就能玩，界面不会再缩成竖屏里的一条小横条。
+- 自己转过 90° 之后，浏览器给的触摸坐标也是"转过"的，所以 `orientation.js` 顺手把
+  `input.transformPointer` 反着算回去（屏幕左上 = 游戏左下，屏幕右上 = 游戏左上）；
+  不转的时候完全不碰它，电脑模式一点不受影响。
+- 竖屏视口下刚开始会闪一下「请把手机横过来」的提示（4 秒后淡掉，`pointer-events: none`
+  不挡操作）。
 - 结局画面按 `R` 回到开场界面重新选模式（`registry` 里的剧情进度一起清空）。
 
 ## 场景切换与街道

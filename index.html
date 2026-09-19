@@ -41,11 +41,32 @@
       #game-root canvas {
         touch-action: none;
       }
+      /*
+       * 手机模式 + 竖屏视口（浏览器不肯转，或者系统锁了竖屏）时的兜底：
+       * 把画布自己转 90° 铺满屏幕，玩家把手机横过来就能玩。
+       * 用样式表 !important 是为了压住 Phaser 每次 refresh 写进 canvas 的
+       * 行内 width/height/margin——行内样式赢不过带 !important 的样式表规则。
+       */
+      body.forced-landscape #game-root {
+        position: fixed;
+        inset: 0;
+      }
+      body.forced-landscape #game-root canvas {
+        position: absolute !important;
+        left: 50% !important;
+        top: 50% !important;
+        margin: 0 !important;
+        width: var(--forced-canvas-w, 100%) !important;
+        height: var(--forced-canvas-h, 100%) !important;
+        transform: translate(-50%, -50%) rotate(90deg);
+      }
       /* 手机模式竖屏时盖上来，提示把手机横过来 */
       #rotate-hint {
         position: fixed;
         inset: 0;
         display: none;
+        /* 提示只是提示，别挡住下面的游戏（手机模式下点屏幕照样能玩） */
+        pointer-events: none;
         align-items: center;
         justify-content: center;
         flex-direction: column;
