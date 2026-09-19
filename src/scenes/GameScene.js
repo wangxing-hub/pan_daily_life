@@ -30,9 +30,10 @@ function mobileHint(text) {
   return text
     .replace('按 E / 空格 互动：', '点右下 E：')
     .replace('按 E / 空格 ', '点右下 E ')
-    .replace('WASD / 方向键 移动　·　Shift 快走　·　E / 空格 互动', '左下方向键移动　·　右下 E 互动')
-    .replace('WASD / 方向键 移动　·　E / 空格 互动', '左下方向键移动　·　右下 E 互动')
-    .replace('WASD 移动', '方向键移动');
+    .replace('WASD / 方向键 移动　·　Shift 快走　·　E / 空格 互动', '左下摇杆移动　·　右下 E 互动')
+    .replace('WASD / 方向键 移动　·　E / 空格 互动', '左下摇杆移动　·　右下 E 互动')
+    .replace('WASD / 方向键 移动', '左下摇杆移动')
+    .replace('WASD 移动', '摇杆移动');
 }
 
 /**

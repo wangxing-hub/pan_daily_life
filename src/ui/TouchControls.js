@@ -1,32 +1,35 @@
 import { GAME_WIDTH, GAME_HEIGHT, FONT } from '../config.js';
 
-/** 左下方向盘 / 右下互动键的布局（游戏坐标，1280x720） */
-const PAD = { x: 168, y: 544, r: 118, btn: 74, off: 62 };
+/** 左下摇杆 / 右下互动键的布局（游戏坐标，1280x720） */
+const STICK = {
+  x: 176, // 底盘中心
+  y: 534,
+  base: 118, // 底盘半径
+  knob: 50, // 摇杆头半径
+  max: 78, // 摇杆头能离开中心的最大距离
+  hit: 168, // 触摸判定半径（比底盘大一圈，手指不用瞄那么准）
+  dead: 14, // 死区：推得比这个还浅就不动
+};
 const ACTION = { x: 1114, y: 546, r: 66 };
-
-const DIRS = [
-  { dir: 'up', dx: 0, dy: -1, arrow: '▲' },
-  { dir: 'down', dx: 0, dy: 1, arrow: '▼' },
-  { dir: 'left', dx: -1, dy: 0, arrow: '◀' },
-  { dir: 'right', dx: 1, dy: 0, arrow: '▶' },
-];
+/** 右半屏整片都算 E 交互（最上面留一条给右上角的音效开关） */
+const INTERACT_ZONE = { x0: 648, y0: 96 };
 
 /**
- * 手机模式的虚拟按键：左边一个方向盘，右边一个互动键（相当于 E）。
+ * 手机模式的虚拟按键：左下**摇杆**（可以斜着推、推多少走多快）+ 右下互动键。
  * 只负责记录状态，真正的读取在 GameScene.readInput / interactJustPressed 里。
  */
 export default class TouchControls {
   constructor(scene) {
     this.scene = scene;
-    this.state = { up: false, down: false, left: false, right: false };
+    this.vec = { x: 0, y: 0 };
     this.interact = false;
+    this.pointerId = null;
     this.build();
   }
 
-  /** 归一化的方向向量（和键盘输入同一套用法） */
+  /** 归一化方向向量，长度 0~1（键盘是 ±1） */
   get vector() {
-    const s = this.state;
-    return { x: (s.right ? 1 : 0) - (s.left ? 1 : 0), y: (s.down ? 1 : 0) - (s.up ? 1 : 0) };
+    return this.vec;
   }
 
   /** 互动键：取一次就清掉（模拟"刚按下"） */
@@ -38,62 +41,72 @@ export default class TouchControls {
 
   build() {
     const s = this.scene;
-    // 同时按住方向键和互动键需要多点触控
+    // 一边推摇杆一边点互动键需要多点触控
     s.input.addPointer(2);
 
-    const base = s.add.graphics().setDepth(9400);
-    base.fillStyle(0x1a1310, 0.34);
-    base.fillCircle(PAD.x, PAD.y, PAD.r);
-    base.lineStyle(3, 0xf2e6cc, 0.28);
-    base.strokeCircle(PAD.x, PAD.y, PAD.r);
+    // 底盘
+    const base = s.add
+      .circle(STICK.x, STICK.y, STICK.base, 0x1a1310, 0.34)
+      .setDepth(9400)
+      .setStrokeStyle(3, 0xf2e6cc, 0.32)
+      .setInteractive(
+        new Phaser.Geom.Circle(STICK.base, STICK.base, STICK.hit),
+        Phaser.Geom.Circle.Contains
+      );
+    // 底盘上的十字提示
+    const cross = s.add.graphics().setDepth(9401);
+    cross.lineStyle(2, 0xf2e6cc, 0.18);
+    cross.beginPath();
+    cross.moveTo(STICK.x - STICK.max, STICK.y);
+    cross.lineTo(STICK.x + STICK.max, STICK.y);
+    cross.moveTo(STICK.x, STICK.y - STICK.max);
+    cross.lineTo(STICK.x, STICK.y + STICK.max);
+    cross.strokePath();
 
-    DIRS.forEach(({ dir, dx, dy, arrow }) => {
-      const x = PAD.x + dx * PAD.off;
-      const y = PAD.y + dy * PAD.off;
-      this.makeButton({
-        x,
-        y,
-        r: PAD.btn / 2,
-        label: arrow,
-        fontSize: 26,
-        onDown: () => {
-          this.state[dir] = true;
-        },
-        onUp: () => {
-          this.state[dir] = false;
-        },
-      });
-    });
+    // 摇杆头
+    this.knob = s.add
+      .circle(STICK.x, STICK.y, STICK.knob, 0xf2e6cc, 0.32)
+      .setDepth(9402)
+      .setStrokeStyle(3, 0xf2e6cc, 0.5);
 
-    // 中间的"方向"小圆点，纯装饰
-    const dot = s.add.circle(PAD.x, PAD.y, 16, 0xf2e6cc, 0.22).setDepth(9401);
-    dot.setStrokeStyle(2, 0xf2e6cc, 0.3);
+    const start = (pointer) => {
+      if (this.pointerId !== null) return; // 已经有一根手指在推了
+      this.pointerId = pointer.id;
+      this.update(pointer);
+      this.knob.setFillStyle(0xc9a44c, 0.45);
+    };
+    const move = (pointer) => {
+      if (this.pointerId !== pointer.id) return;
+      this.update(pointer);
+    };
+    const end = (pointer) => {
+      if (this.pointerId !== pointer.id) return;
+      this.pointerId = null;
+      this.vec.x = 0;
+      this.vec.y = 0;
+      this.knob.setPosition(STICK.x, STICK.y).setFillStyle(0xf2e6cc, 0.32);
+    };
+
+    base.on('pointerdown', start);
+    s.input.on('pointermove', move);
+    s.input.on('pointerup', end);
+    s.input.on('pointerupoutside', end);
 
     // 右下角：互动键
-    this.makeButton({
-      x: ACTION.x,
-      y: ACTION.y,
-      r: ACTION.r,
-      label: 'E',
-      sub: '互动',
-      fontSize: 34,
-      onDown: () => {
-        this.interact = true;
-      },
-      onUp: () => {},
-    });
-    s.add
-      .text(ACTION.x, ACTION.y + ACTION.r + 4, '互动', {
-        fontFamily: FONT,
-        fontSize: '16px',
-        color: '#f2e6cc',
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(9402);
+    this.makeActionButton();
 
-    // 提示文字（只有第一次进手机模式时露个脸）
+    // 右半屏整片也能当 E 用：手指点在右边任何地方都算互动
+    const zw = GAME_WIDTH - INTERACT_ZONE.x0;
+    const zh = GAME_HEIGHT - INTERACT_ZONE.y0;
+    this.interactZone = s.add
+      .zone(INTERACT_ZONE.x0 + zw / 2, INTERACT_ZONE.y0 + zh / 2, zw, zh)
+      .setDepth(9398) // 比 E 按钮低一层，点按钮本身时优先给按钮
+      .setInteractive();
+    this.interactZone.on('pointerdown', () => this.fireInteract());
+
+    // 提示文字（只有刚进手机模式时露个脸）
     this.tip = s.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT - 74, '左边方向键移动　·　右下 E 互动', {
+      .text(STICK.x + 4, STICK.y - STICK.base - 26, '左边摇杆移动　·　右下 E 互动', {
         fontFamily: FONT,
         fontSize: '15px',
         color: '#f2e6cc',
@@ -105,37 +118,67 @@ export default class TouchControls {
     s.tweens.add({ targets: this.tip, alpha: 0, delay: 3200, duration: 900 });
   }
 
-  makeButton({ x, y, r, label, sub, fontSize, onDown, onUp }) {
+  /** 按手指位置算方向和深浅 */
+  update(pointer) {
+    let dx = pointer.x - STICK.x;
+    let dy = pointer.y - STICK.y;
+    const len = Math.hypot(dx, dy);
+    if (len > STICK.max) {
+      dx = (dx / len) * STICK.max;
+      dy = (dy / len) * STICK.max;
+    }
+    this.knob.setPosition(STICK.x + dx, STICK.y + dy);
+    if (len < STICK.dead) {
+      this.vec.x = 0;
+      this.vec.y = 0;
+    } else {
+      this.vec.x = dx / STICK.max;
+      this.vec.y = dy / STICK.max;
+    }
+  }
+
+  makeActionButton() {
     const s = this.scene;
     const circle = s.add
-      .circle(x, y, r, 0xf2e6cc, 0.2)
+      .circle(ACTION.x, ACTION.y, ACTION.r, 0xf2e6cc, 0.2)
       .setDepth(9401)
       .setStrokeStyle(3, 0xf2e6cc, 0.4)
       .setInteractive({ useHandCursor: true });
-
-    const text = s.add
-      .text(x, y, label, {
+    s.add
+      .text(ACTION.x, ACTION.y - 6, 'E', {
         fontFamily: FONT,
-        fontSize: `${fontSize}px`,
+        fontSize: '34px',
         color: '#f7ead0',
         fontStyle: 'bold',
       })
       .setOrigin(0.5)
       .setDepth(9402);
-    if (sub) text.setY(y - 6);
+    s.add
+      .text(ACTION.x, ACTION.y + ACTION.r + 4, '互动', {
+        fontFamily: FONT,
+        fontSize: '16px',
+        color: '#f2e6cc',
+      })
+      .setOrigin(0.5, 0)
+      .setDepth(9402);
 
-    const press = () => {
-      circle.setFillStyle(0xc9a44c, 0.5);
-      onDown();
-    };
-    const release = () => {
-      circle.setFillStyle(0xf2e6cc, 0.2);
-      onUp();
-    };
+    this.actionCircle = circle;
+    const press = () => this.fireInteract();
+    const release = () => circle.setFillStyle(0xf2e6cc, 0.2);
     circle.on('pointerdown', press);
     circle.on('pointerup', release);
     circle.on('pointerout', release);
     circle.on('pointerupoutside', release);
-    return circle;
+  }
+
+  /** 触发一次 E：闪一下右下角那个按钮，让玩家知道点到了 */
+  fireInteract() {
+    this.interact = true;
+    if (this.actionCircle) {
+      this.actionCircle.setFillStyle(0xc9a44c, 0.55);
+      this.scene.time.delayedCall(140, () => {
+        if (this.actionCircle) this.actionCircle.setFillStyle(0xf2e6cc, 0.2);
+      });
+    }
   }
 }

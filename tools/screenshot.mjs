@@ -10,6 +10,7 @@
  *   # 直接跳到某个场景验证画面），例如：
  *   node tools/screenshot.mjs http://localhost:5173/ /tmp/lake.png 3000 \
  *     "eval:window.game.scene.getScene('BankScene').scene.start('LakeScene',{from:'street'}),wait:2500"
+ *   # tap:x y 可以在视口坐标点一下（配合 SHOT_SIZE / SHOT_TOUCH 用来测手机触摸）
  */
 
 import { spawn } from 'node:child_process';
@@ -155,6 +156,11 @@ async function main() {
   });
   if (shotTouch) {
     await send(ws, 'Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+    // 让鼠标事件也生成 touch 事件，这样 tap: 步骤在手机尺寸下就是"点屏幕"
+    await send(ws, 'Emulation.setEmitTouchEventsForMouse', {
+      enabled: true,
+      configuration: 'mobile',
+    });
   }
   await send(ws, 'Page.navigate', { url });
   await sleep(waitMs);
@@ -182,6 +188,31 @@ async function main() {
         returnByValue: true,
       });
       await sleep(120);
+      continue;
+    }
+    // tap:960 300 在视口坐标 (960,300) 点一下（配合 SHOT_TOUCH=1 就是触摸）
+    if (step.startsWith('tap:')) {
+      const [tx, ty] = step
+        .slice(4)
+        .trim()
+        .split(/\s+/)
+        .map(Number);
+      await send(ws, 'Input.dispatchMouseEvent', {
+        type: 'mousePressed',
+        x: tx,
+        y: ty,
+        button: 'left',
+        clickCount: 1,
+      });
+      await sleep(60);
+      await send(ws, 'Input.dispatchMouseEvent', {
+        type: 'mouseReleased',
+        x: tx,
+        y: ty,
+        button: 'left',
+        clickCount: 1,
+      });
+      await sleep(150);
       continue;
     }
     // 前缀 ! 表示这个键按下后不松开（截图时人物还在走）

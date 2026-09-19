@@ -209,6 +209,7 @@ export default class StreetScene extends GameScene {
 
   showEndCard() {
     const center = GAME_WIDTH / 2;
+    const isMobile = this.mode === 'mobile';
     const card = this.add.container(0, 0).setDepth(9801).setAlpha(0);
 
     const place = this.add
@@ -234,7 +235,7 @@ export default class StreetScene extends GameScene {
       })
       .setOrigin(0.5);
     const hint = this.add
-      .text(center, 500, FINALE.hint, {
+      .text(center, 500, isMobile ? FINALE.mobileHint : FINALE.hint, {
         fontFamily: FONT,
         fontSize: '16px',
         color: '#b9a884',
@@ -245,7 +246,32 @@ export default class StreetScene extends GameScene {
     this.tweens.add({ targets: card, alpha: 1, duration: 900 });
     this.tweens.add({ targets: hint, alpha: 0.35, duration: 800, yoyo: true, repeat: -1 });
 
-    this.input.keyboard.once('keydown-R', () => this.restartGame());
+    if (isMobile) {
+      // 手机上没有 R 键：点屏幕回主菜单。做个小"按钮"的样子，延迟 1.2 秒再启用，
+      // 免得刚结束时手指还在屏幕上就误触
+      const btnW = 300;
+      const btnH = 60;
+      const btnY = 566;
+      const btn = this.add.graphics().setDepth(9802).setAlpha(0);
+      btn.fillStyle(0xc9a44c, 0.9);
+      btn.fillRoundedRect(center - btnW / 2, btnY - btnH / 2, btnW, btnH, 14);
+      btn.lineStyle(3, 0xf2dda4, 0.9);
+      btn.strokeRoundedRect(center - btnW / 2, btnY - btnH / 2, btnW, btnH, 14);
+      const btnLabel = this.add
+        .text(center, btnY, '回到主菜单', {
+          fontFamily: FONT,
+          fontSize: '24px',
+          color: '#2b1d10',
+          fontStyle: 'bold',
+        })
+        .setOrigin(0.5)
+        .setDepth(9803)
+        .setAlpha(0);
+      this.tweens.add({ targets: [btn, btnLabel], alpha: 1, duration: 500, delay: 900 });
+      this.time.delayedCall(1200, () => this.input.once('pointerdown', () => this.restartGame()));
+    } else {
+      this.input.keyboard.once('keydown-R', () => this.restartGame());
+    }
   }
 
   /** 按 R：清掉剧情进度，从头再来 */

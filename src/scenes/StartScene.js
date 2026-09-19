@@ -141,7 +141,7 @@ export default class StartScene extends Phaser.Scene {
 
     const options = [
       { mode: 'desktop', icon: '💻', label: '电脑模式', sub: '键盘 WASD 移动 · E 互动' },
-      { mode: 'mobile', icon: '📱', label: '手机模式', sub: '自动横屏 · 左手方向 · 右手互动' },
+      { mode: 'mobile', icon: '📱', label: '手机模式', sub: '自动横屏 · 左下摇杆 · 右下互动' },
     ];
     const centers = [GAME_WIDTH / 2 - MODE_BTN.w / 2 - 24, GAME_WIDTH / 2 + MODE_BTN.w / 2 + 24];
 
@@ -243,7 +243,7 @@ export default class StartScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         GAME_HEIGHT - 12,
-        '电脑模式：WASD / 方向键移动，E / 空格 互动　·　手机模式：左边方向键，右下 E 互动',
+        '电脑模式：WASD / 方向键移动，E / 空格 互动　·　手机模式：左下摇杆，右下 E 互动',
         { fontFamily: FONT, fontSize: '14px', color: '#8f7f68' }
       )
       .setOrigin(0.5, 1)

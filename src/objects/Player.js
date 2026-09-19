@@ -43,7 +43,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     if (moving) {
       const nx = input.x / len;
       const ny = input.y / len;
-      this.setVelocity(nx * speed, ny * speed);
+      // 摇杆推得浅就走得慢；键盘输入的长度是 1（或斜着 1.41），都按满速走
+      const analog = Math.min(1, len);
+      this.setVelocity(nx * speed * analog, ny * speed * analog);
 
       // 四方向判定：斜着走时按更"主导"的轴显示，不会出现转向动画
       this.facing =
