@@ -48,6 +48,8 @@ export default class BankScene extends GameScene {
     this.setupCommon({
       playerX: px,
       playerY: py,
+      // 开局面朝下方（柜台 2 前面站着）；从大门进来则朝着大堂里
+      playerFacing: fromStreet ? 'up' : 'down',
       huangX: joined ? px + 34 : HUANG.startX,
       huangY: joined ? py + 58 : HUANG.startY,
       huangJoined: joined,

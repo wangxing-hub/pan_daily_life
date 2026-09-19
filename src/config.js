@@ -52,8 +52,9 @@ export const PLAYER = {
   runSpeed: 360,
   /** 碰撞体（以精灵表原始像素为单位，会自动乘以 scale） */
   body: { width: 53, height: 31, offsetBottom: 4 },
+  /** 开局站在柜台 2 正下方（银行最靠里的那一排） */
   startX: 640,
-  startY: 560,
+  startY: 356,
 };
 
 /**
@@ -85,9 +86,9 @@ export const HUANG = {
   name: '黄姐',
   /** 嘴的位置（见 SPRITE.mouthRatio） */
   mouthRatio: 0.73,
-  /** 一开始站在大厅左边的花盆旁边 */
-  startX: 322,
-  startY: 656,
+  /** 一开始站在大厅右侧的中间：沙发正上方一点（沙发贴图 y 从 488 开始） */
+  startX: 1010,
+  startY: 470,
   /** 队伍跟随参数 */
   follow: {
     distance: 78,         // 跟在身后多远
