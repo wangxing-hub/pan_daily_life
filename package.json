@@ -1,0 +1,11 @@
+{
+  "name": "pan-daily-life",
+  "version": "0.1.0",
+  "private": true,
+  "description": "《潘尔的日常》H5 小游戏 · 第一个场景：银行大厅",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/dev-server.js",
+    "assets": "python3 tools/build_assets.py"
+  }
+}

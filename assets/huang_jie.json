@@ -1,0 +1,19 @@
+{
+  "image": "huang_jie.png",
+  "frameWidth": 240,
+  "frameHeight": 286,
+  "frames": 9,
+  "source": "黄姐移动精灵图.png",
+  "sourceCellSize": [
+    672,
+    672
+  ],
+  "cropBox": [
+    74,
+    71,
+    481,
+    573
+  ],
+  "downscale": 2,
+  "note": "每格 672x672 的一行动作图，已抠成透明、按公共包围盒对齐。"
+}

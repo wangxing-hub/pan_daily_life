@@ -1,0 +1,19 @@
+{
+  "image": "pan_ersai.png",
+  "frameWidth": 199,
+  "frameHeight": 317,
+  "frames": 9,
+  "source": "潘尔赛的人物精灵图.png",
+  "sourceCellSize": [
+    672,
+    672
+  ],
+  "cropBox": [
+    122,
+    23,
+    399,
+    634
+  ],
+  "downscale": 2,
+  "note": "每格 672x672 的一行动作图，已抠成透明、按公共包围盒对齐。"
+}
